@@ -25,6 +25,9 @@ library(FeatureImpCluster) #Para revisar la importancia de las variables en los 
 library(pheatmap) #Para hacer mapa de calor
 library(dplyr)
 library(flexclust)
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+library(tidyr)
+
 ```
 
 ```{r cargando archivo, echo=FALSE}
@@ -38,7 +41,7 @@ summary(datos)
 
 # 1. Clustering
 ## 1.1. Haga el preprocesamiento del dataset, explique qué variables no aportan información a la generación de grupos y por qué. Describa con qué variables calculará los grupos.
-Como el algoritmo de k-medias necesitan de alguna medida de distancia, entre los datos, en una primera instancia vamos a tomas solo las variables numéricas y vamos a quitar el id por ser como el nombre de una película. Las variables que tomaremos en consideración son las siguientes:
+Como el algoritmo de k-medias y el clustering jerárquico necesitan de alguna medida de distancia, entre los datos, en una primera instancia vamos a tomas solo las variables numéricas y vamos a quitar el id por ser como el nombre de una película. Las variables que tomaremos en consideración son las siguientes:
 
 
 ```{r, echo=FALSE}
@@ -49,8 +52,9 @@ datos_num <- datos %>%
 datos_num <- datos_num[,2:11]
 str(datos_num)
 
+ 
+
 ```
-Luego los normalizamos y centramos para que todas las variables estén en una escala comparable. 
 
 ```{r, include=FALSE}
 datos_num <- scale(datos_num)
@@ -71,15 +75,15 @@ El estadístico de Hopkings es de `r estadisticoHop ` que es lejano a 0.5, enton
 Para ello se usará el metodo de Codo
 
 ```{r, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4, dpi=300}
-set.seed(940) #739102
+set.seed(940) 
 wss=0
-for (i in 1:40) 
+for (i in 1:10) 
   wss[i] <- sum(kmeans(datos_num, centers=i)$withinss)
 
-plot(1:40, wss, type="b", xlab="Número de grupos",  ylab="suma de cuadrados intragrupo")
+plot(1:10, wss, type="b", xlab="Número de grupos",  ylab="suma de cuadrados intragrupo")
 ```
 
-Como a partir de 10 grupos en adelante la suma de cuadrados intragrupo no disminuye significativamente se elegirán 10 grupos. 
+Como a partir de 3 grupos en adelante la suma de cuadrados intragrupo no disminuye tan rápido se elegirán 3 grupos. 
 
 ## 1.4. Utilice los algoritmos k-medias y clustering jerárquico para agrupar. Compare los resultados generados por cada uno.
 
@@ -88,22 +92,29 @@ Como a partir de 10 grupos en adelante la suma de cuadrados intragrupo no dismin
 ```{r, echo=FALSE, kmedias}
  
 set.seed(102)
-kmeans_result <- kmeans(datos_num, centers=10)
+kmeans_result <- kmeans(datos_num, centers=3)
 
 ```
+
+
 
 ```{r jerárquico, echo=FALSE}
 #Matriz de distncias
 D <- dist(datos_num)
 
-
 hc<-hclust(D, method = "ward.D2") #Genera el clustering jerÃ¡rquico de los datos
-plot(hc, cex=0.5, axes=FALSE) #Genera el dendograma
 
+plot(hc, cex=0.5, axes=FALSE) #Genera el dendograma
+rect.hclust(hc,k=3)
+grupos <- cutree(hc, k = 3)
 
 ```
-```{r, comparar agrupamientos}
-plotcluster(datos_num,kmeans_result$cluster)
+```{r, comparar agrupamientos, echo=FALSE}
+plotcluster(datos_num, kmeans_result$cluster)
+title(main="Clusters generados por K-means")
+
+plotcluster(datos_num, grupos)
+title(main="Clusters generados por Clustering Jerárquico")
 
 ```
 
@@ -113,10 +124,103 @@ plotcluster(datos_num,kmeans_result$cluster)
 
 ## 1.5. Determine la calidad del agrupamiento hecho por cada algoritmo con el método de la silueta. Discuta los resultados.
 
+```{r, echo=FALSE}
+library(cluster)
+sil_kmeans <- silhouette(kmeans_result$cluster, D)
+sil_hc <- silhouette(grupos, D)
+
+
+plot(sil_kmeans, main="Silueta K-means",cex.names=.4, col=1:3)
+plot(sil_hc, main="Silueta Clustering Jerárquico", ,cex.names=.4, col=1:3)
+
+```
+
+Usando el método de la silueta el clustering jerárquico que tiene una silueta promedio de $0.35 > 0.15$ del clustering de Kmedias. Entonces para estos datos el clusterin jerárqioco obtubo un mejor resultado. Esto tiene sentido pues en la entrega anterior vimos que ninguna variable se comportaba de manera normal. En estos casos el k-medias no suele ser tan eficiente. 
 
 
 ## 1.6. Interprete los grupos basado en el conocimiento que tiene de los datos. Recuerde investigar las medidas de tendencia central de las variables continuas y las tablas de frecuencia de las variables categóricas pertenecientes a cada grupo. Identifique hallazgos interesantes debido a las agrupaciones y describa para qué le podría servir.
+```{r, saparar df por clusters, echo=FALSE}
+# Asegurar que las variables de cluster están en el dataframe y son factores
+datos <- datos %>%
+  mutate(Cluster_KMeans = factor(kmeans_result$cluster),
+         Cluster_Jerarquico = factor(grupos))
 
+# Crear los 6 dataframes
+df_kmeans_1 <- datos %>% filter(Cluster_KMeans == "1")
+df_kmeans_2 <- datos %>% filter(Cluster_KMeans == "2")
+df_kmeans_3 <- datos %>% filter(Cluster_KMeans == "3")
+
+df_jerarquico_1 <- datos %>% filter(Cluster_Jerarquico == "1")
+df_jerarquico_2 <- datos %>% filter(Cluster_Jerarquico == "2")
+df_jerarquico_3 <- datos %>% filter(Cluster_Jerarquico == "3")
+
+# Mostrar la cantidad de observaciones en cada cluster
+cat("Tamaños de los dataframes:\n")
+cat("K-Means -> Cluster 1:", nrow(df_kmeans_1), " | Cluster 2:", nrow(df_kmeans_2), " | Cluster 3:", nrow(df_kmeans_3), "\n")
+cat("Jerárquico -> Cluster 1:", nrow(df_jerarquico_1), " | Cluster 2:", nrow(df_jerarquico_2), " | Cluster 3:", nrow(df_jerarquico_3), "\n")
+
+
+```
+```{r}
+summary(df_kmeans_1)
+summary(df_kmeans_3)
+summary(df_kmeans_2)
+summary(df_jerarquico_1)
+summary(df_jerarquico_2)
+summary(df_jerarquico_3)
+```
+Como es dificil interpretar los numeros puros vamos a hacer unas gráficas de caja y bigote.
+
+```{r, echo=FALSE}
+
+# Variables clave
+variables <- c("budget", "revenue", "popularity", "voteAvg", "voteCount", "runtime")
+
+# Unificar los datos para K-Means
+df_kmeans <- datos %>% 
+  select(Cluster_KMeans, all_of(variables)) %>% 
+  pivot_longer(cols = all_of(variables), names_to = "Variable", values_to = "Valor")
+
+# Unificar los datos para Clustering Jerárquico
+df_jerarquico <- datos %>% 
+  select(Cluster_Jerarquico, all_of(variables)) %>% 
+  pivot_longer(cols = all_of(variables), names_to = "Variable", values_to = "Valor")
+
+# Crear función para gráficos de caja
+plot_boxplot <- function(df, cluster_col, title) {
+  ggplot(df, aes(x = factor(!!sym(cluster_col)), y = Valor, fill = factor(!!sym(cluster_col)))) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+    facet_wrap(~ Variable, scales = "free_y") + 
+    scale_y_log10() +  # Escala logarítmica para mejor visualización
+    labs(x = "Cluster", y = "Valor", title = title, fill = "Cluster") +
+    theme_minimal() +
+    theme(legend.position = "none")
+}
+
+# Graficar K-Means
+plot_boxplot(df_kmeans, "Cluster_KMeans", "Distribución de Variables por Clusters (K-Means)")
+
+# Graficar Clustering Jerárquico
+
+
+```
+
+koewsjfokerdsf
+
+```{r echo=FALSE}
+plot_boxplot(df_jerarquico, "Cluster_Jerarquico", "Distribución de Variables por Clusters (Jerárquico)")
+```
+#### Clusters generados por K-Means:
+
+    El grupo 1: Presenta valores intermedios en presupuesto, recaudación y popularidad. Probablemente incluya películas comerciales de mediano éxito.
+    El grupo 2: Contiene películas con los presupuestos y recaudaciones más altos, alta popularidad y una gran cantidad de votos. Es probable que sean grandes producciones o éxitos de taquilla.
+    El grupo 3: Se caracteriza por películas con presupuestos y recaudaciones bajas, menor popularidad y pocos votos. Parece representar películas independientes o de bajo presupuesto.
+
+#### Clusters generados por Clustering Jerárquico:
+
+    El grupo 1: Incluye películas con recaudación y presupuesto moderado,  popularidad mas bien baja.
+    El grupo 2: Peliculas de alto presupuesto, altas recaudacion y popularidad
+    El grupo 3: Agrupa peliculas de bajo presupuesto, con popularidades relativamente bajas y recaudaciones muy dispersas. 
 
 
 
