@@ -1,0 +1,145 @@
+---
+title: "Proyecto1"
+author:
+- "Juan Luis Solórzano (carnet: 201598)"
+- - "Micaela Yataz (carnet: 18960)"
+date: "2025-01-20"
+output: pdf_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+library(psych)
+library(FactoMineR)
+library(fpc)
+library(factoextra)
+library(corrplot)
+library(PCAmixdata)
+library(paran)
+```
+
+
+```{r cargando archivo, echo=FALSE}
+datos<-read.csv("C:/Users/junKa/Desktop/datos/movies.csv", stringsAsFactors = F)
+
+```
+
+
+
+#(20 puntos) Análisis de componentes Principales
+
+#•Estudia la matriz de correlación, la agrega y explica lo que observa en ella
+
+En el analisis se realiza a patir de una muestra de datos de 10000 peliculas obtenidos de la plataforma The movie DB. Se evalua la correlacion entre variables. Se presentan las varibales que se incuyen en el analisis:
+
+Indice de popularidad de la película
+Presupuesto de la película
+Ingreso de la película
+Duración de la película
+Cantidad de géneros que representan la película
+Cantidad de companias productoras que participaron en la película
+Cantidad de paises que se llevó a cabo la pelicula 
+Número de votos en la platadorma de la película
+Promedio de votos en la plataforma de la película
+Índice de popularidad del elenco de la película
+Cantidad de personas que actúan en la película
+Cantidad de actrices en el elenco de la película
+Cantidad de actores en el elenco de la película.
+
+```{r}
+datos$castWomenAmount<- as.numeric(datos$castWomenAmount)
+datos$castMenAmount<- as.numeric(datos$castMenAmount)
+datos$actorsPopularity <-as.character(datos$actorsPopularity)
+datos$actorsPopularity<- strsplit(datos$actorsPopularity, "\\|")
+datos$actorsPopularity<-lapply(N, as.numeric, use = "pairwise.complete.obs")
+datos$actorsPopularity<- sapply(O, function(x) if (all(is.na(x))) NA else mean(x, na.rm = TRUE))
+datos$actorsPopularity<- sapply(O, function(x) { 
+  if (all(is.na(x))) { 
+    return(NA)  # Si todos son NA, el promedio es NA
+  } else { 
+    return(mean(x, na.rm = TRUE))  # Calcular la media sin contar los NA
+  }
+})
+  
+sub_datos<-datos[, c("popularity", "budget", "revenue", "runtime", "genresAmount", "productionCoAmount", "productionCountriesAmount", "voteCount", "voteAvg", "castWomenAmount", "castMenAmount" )]
+matriz_cor <- cor(sub_datos, use = "pairwise.complete.obs" )
+determinante<-det(matriz_cor)
+```
+
+```{r}
+print(matriz_cor)
+
+```
+La determinante es `r det(rcor)` indicando que las variabes estan relacionadas entre si 
+
+#• Determina si es posible usar la técnica de análisis factorial para hallar las componentes
+principales
+
+```{r}
+KMO(as.matrix(sub_datos))
+```
+El indice es de 0.67 lo cual es un valor regular, es suficiente pero no el ideal.
+
+#• Determina si vale la pena aplicar las componentes principales interpretando la prueba de
+esfericidad de Bartlett
+
+```{r}
+cortest.bartlett(sub_datos)
+```
+Como P=0 por lo que se rechaza la hipotesis nula, implicando que el analisis factorial es apropiado.
+
+#• Obtiene los componentes principales y explica cuántos seleccionará para explicar la mayor variabilidad posible.
+
+```{r matriz de correlacion}
+matriz_cor <- cor(sub_datos, use = "pairwise.complete.obs" )
+corrplot(matriz_cor)
+```
+Segun la tabla vemos que la variable del presupuesto de la pelicula se correlaciona con ingreso de pelicula, asi mismo con el numero de votos en la plataforma.
+El numero de votos en la plataforma con el ingreso de la pelicula tambien estan correlacionados.
+El numero de actores en el elenco de las peliculas esta relacionado con la cantidad de paises en los que se rodo la pelicula.
+
+#• Interpreta los coeficientes principales.
+
+
+```{r PCA}
+
+pca_result<-princomp(covmat=matriz_cor,use = "pairwise.complete.obs" )
+#compPrinc<-prcomp(sub_datos, scale = T, use = "pairwise.complete.obs")
+#compPrinc
+summary(pca_result)
+
+```
+#regla de Kaiser
+
+```{r}
+valores_propios<-pca_result$sdev^2
+valores_propios
+```
+Tomamos los 4 componentes principales.
+
+```{r screeplot}
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 80))
+fviz_eig(pca_result, addlabels = TRUE, choice = c("eigenvalue"), ylim = c(0, 3))
+
+```
+
+Interpretacion: 
+la componenete 1 se relaciona con el exito comercial y popularidad de la pelicula, las peliculas con alto presupuesto alto ingreso, y votaciones tienen valores altos en este componente.
+
+El componente 2, puede indicar la cantidad de actores en el elenco pueden estar asociados con los paises productores.
+
+El componente 3, inidica un mayor numero de mujeres en el elenco tienden a tener menor puntuacion.
+
+El componente 4, Los valores altos podriamos relacionarlo con las peliculas independientes, es decir con menos productoras.
+
+
+
+
+
+
