@@ -30,9 +30,11 @@ library(tidyr)
 
 ```
 
-```{r cargando archivo, echo=FALSE}
+```{r cargar datos,  echo=FALSE}
 #datos <- read.csv('movies.csv')
-datos <- read.csv('movies.csv', fileEncoding = "latin1")
+#datos <- read.csv('movies.csv',stringsAsFactors = F)
+
+datos<-read.csv("movies.csv", stringsAsFactors = F)
 
 summary(datos)
 ```
@@ -44,7 +46,7 @@ summary(datos)
 Como el algoritmo de k-medias y el clustering jerárquico necesitan de alguna medida de distancia, entre los datos, en una primera instancia vamos a tomas solo las variables numéricas y vamos a quitar el id por ser como el nombre de una película. Las variables que tomaremos en consideración son las siguientes:
 
 
-```{r, echo=FALSE}
+```{r, tomando variables cuantitativas, echo=FALSE}
 
 datos_num <- datos %>%
   select(where(~ is.integer(.) | is.numeric(.)))
@@ -56,7 +58,7 @@ str(datos_num)
 
 ```
 
-```{r, include=FALSE}
+```{r Revisando los datos y variables, include=FALSE}
 datos_num <- scale(datos_num)
 summary(datos_num)
 ```
@@ -74,7 +76,7 @@ El estadístico de Hopkings es de `r estadisticoHop ` que es lejano a 0.5, enton
 
 Para ello se usará el metodo de Codo
 
-```{r, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4, dpi=300}
+```{r codo, echo=FALSE, warning=FALSE, fig.width=6, fig.height=4, dpi=300}
 set.seed(940) 
 wss=0
 for (i in 1:10) 
@@ -89,7 +91,7 @@ Como a partir de 3 grupos en adelante la suma de cuadrados intragrupo no disminu
 
 
 
-```{r, echo=FALSE, kmedias}
+```{r kmedias con k 3, echo=FALSE}
  
 set.seed(102)
 kmeans_result <- kmeans(datos_num, centers=3)
@@ -109,37 +111,48 @@ rect.hclust(hc,k=3)
 grupos <- cutree(hc, k = 3)
 
 ```
-```{r, comparar agrupamientos, echo=FALSE}
+
+
+```{r comparar agrupamientos, echo=FALSE}
 plotcluster(datos_num, kmeans_result$cluster)
 title(main="Clusters generados por K-means")
 
-plotcluster(datos_num, grupos)
-title(main="Clusters generados por Clustering Jerárquico")
+
 
 ```
 
+```{r el otro resultado, echo=FALSE}
+plotcluster(datos_num, grupos)
+title(main="Clusters generados por Clustering Jerárquico")
+```
 
 
 
 
 ## 1.5. Determine la calidad del agrupamiento hecho por cada algoritmo con el método de la silueta. Discuta los resultados.
 
-```{r, echo=FALSE}
+```{r sillueta kmedias , echo=FALSE}
 library(cluster)
 sil_kmeans <- silhouette(kmeans_result$cluster, D)
 sil_hc <- silhouette(grupos, D)
 
 
 plot(sil_kmeans, main="Silueta K-means",cex.names=.4, col=1:3)
-plot(sil_hc, main="Silueta Clustering Jerárquico", ,cex.names=.4, col=1:3)
+
 
 ```
+
+
+```{r silueta jerárquico,  echo=FALSE, message=FALSE, warning=FALSE}
+plot(sil_hc, main="Silueta Clustering Jerárquico", ,cex.names=.4, col=1:3)
+```
+
 
 Usando el método de la silueta el clustering jerárquico que tiene una silueta promedio de $0.35 > 0.15$ del clustering de Kmedias. Entonces para estos datos el clusterin jerárqioco obtubo un mejor resultado. Esto tiene sentido pues en la entrega anterior vimos que ninguna variable se comportaba de manera normal. En estos casos el k-medias no suele ser tan eficiente. 
 
 
 ## 1.6. Interprete los grupos basado en el conocimiento que tiene de los datos. Recuerde investigar las medidas de tendencia central de las variables continuas y las tablas de frecuencia de las variables categóricas pertenecientes a cada grupo. Identifique hallazgos interesantes debido a las agrupaciones y describa para qué le podría servir.
-```{r, saparar df por clusters, echo=FALSE}
+```{r saparar df por clusters, echo=FALSE}
 # Asegurar que las variables de cluster están en el dataframe y son factores
 datos <- datos %>%
   mutate(Cluster_KMeans = factor(kmeans_result$cluster),
@@ -161,17 +174,10 @@ cat("Jerárquico -> Cluster 1:", nrow(df_jerarquico_1), " | Cluster 2:", nrow(df
 
 
 ```
-```{r}
-summary(df_kmeans_1)
-summary(df_kmeans_3)
-summary(df_kmeans_2)
-summary(df_jerarquico_1)
-summary(df_jerarquico_2)
-summary(df_jerarquico_3)
-```
+
 Como es dificil interpretar los numeros puros vamos a hacer unas gráficas de caja y bigote.
 
-```{r, echo=FALSE}
+```{r caja y bigote kmedias, echo=FALSE}
 
 # Variables clave
 variables <- c("budget", "revenue", "popularity", "voteAvg", "voteCount", "runtime")
@@ -205,28 +211,115 @@ plot_boxplot(df_kmeans, "Cluster_KMeans", "Distribución de Variables por Cluste
 
 ```
 
-koewsjfokerdsf
-
-```{r echo=FALSE}
-plot_boxplot(df_jerarquico, "Cluster_Jerarquico", "Distribución de Variables por Clusters (Jerárquico)")
-```
 #### Clusters generados por K-Means:
 
     El grupo 1: Presenta valores intermedios en presupuesto, recaudación y popularidad. Probablemente incluya películas comerciales de mediano éxito.
     El grupo 2: Contiene películas con los presupuestos y recaudaciones más altos, alta popularidad y una gran cantidad de votos. Es probable que sean grandes producciones o éxitos de taquilla.
     El grupo 3: Se caracteriza por películas con presupuestos y recaudaciones bajas, menor popularidad y pocos votos. Parece representar películas independientes o de bajo presupuesto.
 
+
+```{r caja y bigote jerarquico, echo=FALSE}
+plot_boxplot(df_jerarquico, "Cluster_Jerarquico", "Distribución de Variables por Clusters (Jerárquico)")
+```
+
 #### Clusters generados por Clustering Jerárquico:
 
     El grupo 1: Incluye películas con recaudación y presupuesto moderado,  popularidad mas bien baja.
     El grupo 2: Peliculas de alto presupuesto, altas recaudacion y popularidad
     El grupo 3: Agrupa peliculas de bajo presupuesto, con popularidades relativamente bajas y recaudaciones muy dispersas. 
+    
+  
 
 
 
-#(20 puntos) Análisis de componentes Principales
 
-#•Estudia la matriz de correlación, la agrega y explica lo que observa en ella
+# 2. Reglas de Asociación
+2.1. Obtenga reglas de asociación interesantes del conjunto de datos usando el algoritmo “A
+priori”. Recuerde discretizar las variables numéricas. Genere reglas con diferentes niveles
+de confianza y soporte. Discuta los resultados. Si considera que debe eliminar variables
+
+```{r otras librerias , echo=FALSE, warning=FALSE}
+library(arules)
+library(dplyr)
+library(arulesViz)
+```
+
+
+```{r preparando los datos para apriori, cache=FALSE, echo=FALSE}
+datosD <- datos %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(across(where(is.numeric), discretize))
+trans <- as(datos,"transactions")
+
+```
+
+
+```{r ejecutando aprioris,include=FALSE }
+
+# Definir valores de soporte y confianza
+soporter <- c(.12,.22,.28, .35, .50)
+confianzas <- c(.4, .60, .85)
+
+# Crear un data frame vacío para almacenar los resultados
+resultados <- data.frame(Soporte = numeric(),
+                         Confianza = numeric(),
+                         Num_Reglas = integer())
+
+# Bucle anidado para probar todas las combinaciones
+for (s in soporter) {
+  for (c in confianzas) {
+    # Generar reglas con los parámetros actuales
+    reglas <- apriori(trans, parameter = list(support = s, 
+                                              confidence = c, 
+                                              target = "rules", 
+                                              minlen = 3, maxlen = 7))
+   
+    resultados <- rbind(resultados, data.frame(Soporte = s, 
+                                               Confianza = c, 
+                                               Num_Reglas = length(reglas)))
+  }
+}
+
+# Mostrar la tabla con los resultados
+
+
+# También puedes ordenarlo por número de reglas si lo deseas
+resultados <- arrange(resultados, desc(Num_Reglas))
+
+
+```
+
+
+```{r mapa de calor del numero de reglas}
+library(ggplot2)
+
+# Crear el gráfico de calor
+ggplot(resultados, aes(x = factor(Soporte), y = factor(Confianza), fill = Num_Reglas)) +
+  geom_tile() +
+  geom_text(aes(label = Num_Reglas), color = "white", size = 5) + 
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "Cantidad de Reglas Generadas", 
+       x = "Soporte", 
+       y = "Confianza", 
+       fill = "N° de Reglas") +
+  theme_minimal()
+
+```
+Con el mapa de calor de el numero de reglas tenemos una idea de que soporte y confianza es buena idea elegir.Para discutir sobre las variables que mas importan para las reglas y las que menos vamos a elegir un soporte de 30% y una confianza de 60%
+
+```{r  message=FALSE,warning=FALSE,echo=FALSE}
+reglas <- apriori(trans, parameter = list(support = s, 
+                                              confidence = c, 
+                                              target = "rules", 
+                                              minlen = 3, maxlen = 7))
+inspect(reglas)
+```
+Sorpresa, a la base de datos le agregue las etiquetas de los clusters. La mayoria de regras tienen algo que ver con el cluster jerárquico 1 . Pero las reglas tienen intervalos muy grandes, tanto que no aportan conocimineto relevante Yo quitaría esa variable. 
+
+
+# 3 Análisis de componentes Principales
+
+## Estudia la matriz de correlación, la agrega y explica lo que observa en ella
 
 En el analisis se realiza a patir de una muestra de datos de 10000 peliculas obtenidos de la plataforma The movie DB. Se evalua la correlacion entre variables. Se presentan las varibales que se incuyen en el analisis:
 
@@ -244,14 +337,35 @@ Cantidad de personas que actúan en la película
 Cantidad de actrices en el elenco de la película
 Cantidad de actores en el elenco de la película.
 
-```{r}
+
+
+
+
+```{r setup, include=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+library(psych)
+library(FactoMineR)
+library(fpc)
+library(factoextra)
+library(corrplot)
+library(PCAmixdata)
+library(paran)
+```
+
+
+
+```{r eleccion}
 datos$castWomenAmount<- as.numeric(datos$castWomenAmount)
 datos$castMenAmount<- as.numeric(datos$castMenAmount)
 datos$actorsPopularity <-as.character(datos$actorsPopularity)
 datos$actorsPopularity<- strsplit(datos$actorsPopularity, "\\|")
-datos$actorsPopularity<-lapply(N, as.numeric, use = "pairwise.complete.obs")
-datos$actorsPopularity<- sapply(O, function(x) if (all(is.na(x))) NA else mean(x, na.rm = TRUE))
-datos$actorsPopularity<- sapply(O, function(x) { 
+datos$actorsPopularity<-lapply(datos$actorsPopularity, as.numeric, use = "pairwise.complete.obs")
+datos$actorsPopularity<- sapply(datos$actorsPopularity, function(x) if (all(is.na(x))) NA else mean(x, na.rm = TRUE))
+datos$actorsPopularity<- sapply(datos$actorsPopularity, function(x) { 
   if (all(is.na(x))) { 
     return(NA)  # Si todos son NA, el promedio es NA
   } else { 
@@ -264,16 +378,20 @@ matriz_cor <- cor(sub_datos, use = "pairwise.complete.obs" )
 determinante<-det(matriz_cor)
 ```
 
-```{r}
-print(matriz_cor)
 
+
+
+La determinante es 
+```{r ver determinantes}
+print(determinante)
 ```
-La determinante es `r det(rcor)` indicando que las variabes estan relacionadas entre si 
 
-#• Determina si es posible usar la técnica de análisis factorial para hallar las componentes
+indicando que las variabes estan relacionadas entre si 
+
+#Determina si es posible usar la técnica de análisis factorial para hallar las componentes
 principales
 
-```{r}
+```{r kmo}
 KMO(as.matrix(sub_datos))
 ```
 El indice es de 0.67 lo cual es un valor regular, es suficiente pero no el ideal.
@@ -281,7 +399,7 @@ El indice es de 0.67 lo cual es un valor regular, es suficiente pero no el ideal
 #• Determina si vale la pena aplicar las componentes principales interpretando la prueba de
 esfericidad de Bartlett
 
-```{r}
+```{r cortes }
 cortest.bartlett(sub_datos)
 ```
 Como P=0 por lo que se rechaza la hipotesis nula, implicando que el analisis factorial es apropiado.
@@ -322,7 +440,7 @@ fviz_eig(pca_result, addlabels = TRUE, choice = c("eigenvalue"), ylim = c(0, 3))
 ```
 
 Interpretacion: 
-la componenete 1 se relaciona con el exito comercial y popularidad de la pelicula, las peliculas con alto presupuesto alto ingreso, y votaciones tienen valores altos en este componente.
+EL componenete 1 se relaciona con el exito comercial y popularidad de la pelicula, las peliculas con alto presupuesto alto ingreso, y votaciones tienen valores altos en este componente.
 
 El componente 2, puede indicar la cantidad de actores en el elenco pueden estar asociados con los paises productores.
 
@@ -334,8 +452,8 @@ El componente 4, Los valores altos podriamos relacionarlo con las peliculas inde
 
 
 
-
-
+  
+    
 
 
 
