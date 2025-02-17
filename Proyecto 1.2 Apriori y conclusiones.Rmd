@@ -1,0 +1,160 @@
+---
+title: "Proyecto1"
+author:
+- 'Juan Luis Solórzano (carnet: 201598)'
+- 'Micaela Yataz (carnet: 18960)'
+date: "2025-01-20"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r intalacion de librerias}
+if(! "arules" %in% installed.packages()) install.packages("arules", depend = TRUE)
+if(! "arulesViz" %in% installed.packages()) install.packages("arulesViz", depend = TRUE)
+library(arules)
+library(dplyr)
+library(arulesViz)
+```
+
+```{r cargando archivo, echo=FALSE}
+datos<-read.csv("C:/Users/junKa/Desktop/datos/movies.csv", stringsAsFactors = F)
+
+```
+
+(15 puntos) Reglas de asociación • Construye reglas de asociación usando el algoritmo a priori.
+
+```{r procesar datos}
+
+variables <- c("budget","genres","homePage","productionCompany","productionCompanyCountry","productionCountry","revenue","runtime","video","director","actors","actorsPopularity","actorsCharacter","originalTitle","title","originalLanguage","popularity","releaseDate","voteAvg","voteCount","genresAmount","productionCoAmount","productionCountriesAmount","actorsAmount","castWomenAmount","castMenAmount")
+```
+
+```{r convirtendo categoricas en factor y discretizando las numericas}
+pelis<- datos %>% 
+  mutate(across(all_of(variables), as.factor)) %>%
+  mutate(across(!all_of(variables), discretize))
+#convirtiendo en transacciones
+transa<- as(pelis, "transactions")
+#crear variables dummy de las categoricas
+summary(transa)
+itemLabels(transa)
+as(transa[1:2, 1:10], "matrix")
+
+                                        
+```
+
+```{r}
+reglas<-apriori(transa, parameter = list(support= 0.20, target="frequent", minlen=2, maxlen=4))
+
+inspect(sort(reglas))          
+
+
+```
+
+• Prueba con varios valores de confianza y soporte, y decide si quitar o no características para obtener mejores hallazgos.
+
+• Discute sobre las reglas de asociación más interesantes teniendo en cuenta sus niveles de confianza y soporte
+
+```{r prueba 1, soporte alto confianza alta  }
+reglas<-apriori(transa, parameter = list(support= 0.30, confidence=0.7, target="frequent", minlen=2, maxlen=4))
+
+inspect(sort(reglas))          
+
+
+```
+Con un soporte alto, de mayor o igual a 0.30, por lo que se tomaron en cuenta solo las reglas donde aparecen al menos el 30% de las transacciones. 
+1. Notese que se observan muchas, video=FALSE, aparece en casi toda la lista por lo que no seria demasiado util y se podria eliminar en proximas pruebas.
+2. originialLanguage=en lo cual indica que la mayoria de las peliculas entan en ingles, si el 70% de estos datos tiene esta caracteristica se recomienda eliminar de para proximas pruebas. 
+3. Las reglas de productionCountry=United States of America, originalLanguage=en indicando que la mayoria de peliculas provenientes de Estados Unidos esten en ingles, seria util probar con valores mas bajos.
+4. La regla budget=0, revenue=0, sugiere que hay muchas peliculas con presupuesto no registrados muy bajos.
+
+```{r prueba 2, soporte medio confianza media  }
+reglas<-apriori(transa, parameter = list(support= 0.20, confidence=0.6, target="frequent", minlen=2, maxlen=4))
+
+inspect(sort(reglas))          
+
+
+```
+1. las reglas> video=FALSE, originalLanguage=en, sigue dominando hay mas reglas relacionadas con presupuesto y revenue 
+2. Aun aparece la regla budget=0, revenue=0 lo que sugiere la existencia de un grupo de peliculas con poco presupuesto 
+
+```{r prueba 3, soporte bajo, confianza baja  }
+reglas<-apriori(transa, parameter = list(support= 0.10, confidence=0.5, target="frequent", minlen=2, maxlen=4))
+
+inspect(sort(reglas))          
+
+
+```
+1. Las reglas: video=FALSE, originalLanguage=en, sigue dominando en los items
+2. Los items budget=0, revenue=0 son de mayor frecuencia, por lo que los datos tienen valores de presupuesto e ingresos en cero
+
+
+```{r probar }
+quality(reglas)$lift <- interestMeasure(reglas, measure = "lift", transa =transa)
+inspect(head(sort(reglas, by ="lift"), n=10))
+plot(head(sort(reglas, by="lift"), n=50), method = "graph", control=list(cex=.8))
+
+```
+1. Notese que la regla productionCountry=United States of America, asociado con            originalLanguage=en, sugiriendo que la mayoria de peliculas de Estados Unidos tiene en ingles como idioma original y son producidas en un solo pais 
+2. Las reglas de budget=0, revenue=0, indicio de peliculas sin datos de presupuesto e ingresos registrados
+3. genresAmount=2, genresAmount=3, aparecen conectados, posible tendencia de peliculas con numero bajo de generos 
+
+
+
+
+(25 puntos) Hallazgos y conclusiones.
+
+• Hace un resumen de los hallazgos que arrojó el agrupamiento.
+
+
+• Llega a conclusiones sobre el análisis de componentes principales
+
+La componente 1 nos indica el exito comercual y popularidad. Relacionado con el presupuesto, ingreso y votaciones de la pelicula, la cua indica que si una pelicula tiene valores altos en este componente, tiende a ser mas exitosa y populares generando mas ingresos
+
+El componente 2, se relaciona con la cantidad de actores que hay en el elenco y los paises productores
+
+El componente 3 acentua la presencia femenina en el elenco y puntuacion, sugiendo que las peliculas con mayor numero de actrices tienden a tener menor puntuacion. Podria refejar prejuicios o esteriotipos en la industria o en el publico
+
+El componente 4 relaciona las peliculas independientes que requieren de mas evidencia para llegar a una conclusion, es decir analizar mas variable.  
+
+
+
+
+• Determina las reglas de asociación más interesantes.
+```{r}
+quality(reglas)$lift <- interestMeasure(reglas, measure = "lift", transa =transa)
+inspect(head(sort(reglas, by ="lift"), n=10))
+
+```
+
+La regla mas fuerte (lift=2.94):
+Si la pelicula tiene presupuesto 0 budget=0 y no genero ingresos revenue=0, es probable que sea producida desde una sola compania productionCoAmount=1 en un solo pais  productionCountry=1. Posibles proyectos independientes
+
+Segunda regla (lift=2.86)
+{id=[3.77e+05,9.22e+05],budget=0, revenue=0. Rango de peliculas con cero presupuesto y cero ingreso, lo que pueden ser proyectos cancelados, 
+
+Tercera regla
+la mayoria de peliculas con cero presupuesto y cero ingreso, estan en ingles.
+
+• Propone sugerencias a CineVision Studios para nuevos desarrollos y mejora de áreas teniendo en cuenta los descubrimientos que hizo.
+
+
+Varias de las reglas con presupuesto=0 e ingresos=0, se sugiere conciderar invertir en proyectos independientes con mejor financiamiento y buen promocional para mas exito.
+
+Identificar factores que diferencian producciones de bajo presupuesto y gran exito para replica 
+
+Varias reglas detectaoron que mucas peliculas son producidas por una sola compania y en un solo pais, predominando EEUU y que son en ingles. Se recomienda alianzas entre estudios para diversificar producciones, Abrirse nuevos mercados, aportando en la diversidad cultural, implicando conocimiento global.
+
+Al tener varios datos de forma budget=0 y revenue=0 podria indicar problemas de registro de datos, por lo que se recomienda mejorar la recopilacion de datos para tener informacion mas precisas 
+
+Desarollar mejores estrategias de marketing mas efectivas para aprovechar maxima difucion. 
+
