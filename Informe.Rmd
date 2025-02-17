@@ -8,7 +8,7 @@ output: pdf_document
 ---
 
 
-
+# git: https://github.com/JusSolo/Mineria_Proyecto1.2.git
 
 
 
@@ -27,12 +27,7 @@ library(dplyr)
 library(flexclust)
 if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
 library(tidyr)
-if(! "arules" %in% installed.packages()) install.packages("arules", depend = TRUE)
-if(! "arulesViz" %in% installed.packages()) install.packages("arulesViz", depend = TRUE)
-library(arules)
-library(dplyr)
-library(arulesViz)
-```
+
 ```
 
 ```{r cargar datos,  echo=FALSE}
@@ -236,92 +231,6 @@ plot_boxplot(df_jerarquico, "Cluster_Jerarquico", "Distribución de Variables po
   
 
 
-
-
-# 2. Reglas de Asociación
-2.1. Obtenga reglas de asociación interesantes del conjunto de datos usando el algoritmo “A
-priori”. Recuerde discretizar las variables numéricas. Genere reglas con diferentes niveles
-de confianza y soporte. Discuta los resultados. Si considera que debe eliminar variables
-
-```{r otras librerias , echo=FALSE, warning=FALSE}
-library(arules)
-library(dplyr)
-library(arulesViz)
-```
-
-
-```{r preparando los datos para apriori, cache=FALSE, echo=FALSE}
-datosD <- datos %>%
-  mutate(across(where(is.character), as.factor)) %>%
-  mutate(across(where(is.numeric), discretize))
-trans <- as(datos,"transactions")
-
-```
-
-
-```{r ejecutando aprioris,include=FALSE }
-
-# Definir valores de soporte y confianza
-soporter <- c(.12,.22,.28, .35, .50)
-confianzas <- c(.4, .60, .85)
-
-# Crear un data frame vacío para almacenar los resultados
-resultados <- data.frame(Soporte = numeric(),
-                         Confianza = numeric(),
-                         Num_Reglas = integer())
-
-# Bucle anidado para probar todas las combinaciones
-for (s in soporter) {
-  for (c in confianzas) {
-    # Generar reglas con los parámetros actuales
-    reglas <- apriori(trans, parameter = list(support = s, 
-                                              confidence = c, 
-                                              target = "rules", 
-                                              minlen = 3, maxlen = 7))
-   
-    resultados <- rbind(resultados, data.frame(Soporte = s, 
-                                               Confianza = c, 
-                                               Num_Reglas = length(reglas)))
-  }
-}
-
-# Mostrar la tabla con los resultados
-
-
-# También puedes ordenarlo por número de reglas si lo deseas
-resultados <- arrange(resultados, desc(Num_Reglas))
-
-
-```
-
-
-```{r mapa de calor del numero de reglas}
-library(ggplot2)
-
-# Crear el gráfico de calor
-ggplot(resultados, aes(x = factor(Soporte), y = factor(Confianza), fill = Num_Reglas)) +
-  geom_tile() +
-  geom_text(aes(label = Num_Reglas), color = "white", size = 5) + 
-  scale_fill_gradient(low = "blue", high = "red") +
-  labs(title = "Cantidad de Reglas Generadas", 
-       x = "Soporte", 
-       y = "Confianza", 
-       fill = "N° de Reglas") +
-  theme_minimal()
-
-```
-Con el mapa de calor de el numero de reglas tenemos una idea de que soporte y confianza es buena idea elegir.Para discutir sobre las variables que mas importan para las reglas y las que menos vamos a elegir un soporte de 30% y una confianza de 60%
-
-```{r  message=FALSE,warning=FALSE,echo=FALSE}
-reglas <- apriori(trans, parameter = list(support = s, 
-                                              confidence = c, 
-                                              target = "rules", 
-                                              minlen = 3, maxlen = 7))
-inspect(reglas)
-```
-Sorpresa, a la base de datos le agregue las etiquetas de los clusters. La mayoria de regras tienen algo que ver con el cluster jerárquico 1 . Pero las reglas tienen intervalos muy grandes, tanto que no aportan conocimineto relevante Yo quitaría esa variable. 
-
-
 # 3 Análisis de componentes Principales
 
 ## Estudia la matriz de correlación, la agrega y explica lo que observa en ella
@@ -455,7 +364,90 @@ El componente 4, Los valores altos podriamos relacionarlo con las peliculas inde
 
 
 
-(15 puntos) Reglas de asociación • Construye reglas de asociación usando el algoritmo a priori.
+# 2. Reglas de Asociación
+2.1. Obtenga reglas de asociación interesantes del conjunto de datos usando el algoritmo “A
+priori”. Recuerde discretizar las variables numéricas. Genere reglas con diferentes niveles
+de confianza y soporte. Discuta los resultados. Si considera que debe eliminar variables
+
+```{r otras librerias , echo=FALSE, warning=FALSE}
+library(arules)
+library(dplyr)
+library(arulesViz)
+```
+
+
+```{r preparando los datos para apriori, cache=FALSE, echo=FALSE}
+datosD <- datos %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(across(where(is.numeric), discretize))
+trans <- as(datos,"transactions")
+
+```
+
+
+```{r ejecutando aprioris,include=FALSE }
+
+# Definir valores de soporte y confianza
+soporter <- c(.12,.22,.28, .35, .50)
+confianzas <- c(.4, .60, .85)
+
+# Crear un data frame vacío para almacenar los resultados
+resultados <- data.frame(Soporte = numeric(),
+                         Confianza = numeric(),
+                         Num_Reglas = integer())
+
+# Bucle anidado para probar todas las combinaciones
+for (s in soporter) {
+  for (c in confianzas) {
+    # Generar reglas con los parámetros actuales
+    reglas <- apriori(trans, parameter = list(support = s, 
+                                              confidence = c, 
+                                              target = "rules", 
+                                              minlen = 3, maxlen = 7))
+   
+    resultados <- rbind(resultados, data.frame(Soporte = s, 
+                                               Confianza = c, 
+                                               Num_Reglas = length(reglas)))
+  }
+}
+
+# Mostrar la tabla con los resultados
+
+
+# También puedes ordenarlo por número de reglas si lo deseas
+resultados <- arrange(resultados, desc(Num_Reglas))
+
+
+```
+
+
+```{r mapa de calor del numero de reglas}
+library(ggplot2)
+
+# Crear el gráfico de calor
+ggplot(resultados, aes(x = factor(Soporte), y = factor(Confianza), fill = Num_Reglas)) +
+  geom_tile() +
+  geom_text(aes(label = Num_Reglas), color = "white", size = 5) + 
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "Cantidad de Reglas Generadas", 
+       x = "Soporte", 
+       y = "Confianza", 
+       fill = "N° de Reglas") +
+  theme_minimal()
+
+```
+Con el mapa de calor de el numero de reglas tenemos una idea de que soporte y confianza es buena idea elegir.Para discutir sobre las variables que mas importan para las reglas y las que menos vamos a elegir un soporte de 30% y una confianza de 60%
+
+```{r  message=FALSE,warning=FALSE,echo=FALSE}
+reglas <- apriori(trans, parameter = list(support = s, 
+                                              confidence = c, 
+                                              target = "rules", 
+                                              minlen = 3, maxlen = 7))
+#inspect(reglas)
+```
+Sorpresa, a la base de datos le agregue las etiquetas de los clusters. La mayoria de regras tienen algo que ver con el cluster jerárquico 1 . Pero las reglas tienen intervalos muy grandes, tanto que no aportan conocimineto relevante Yo quitaría esa variable. 
+
+
 
 ```{r procesar datos}
 
@@ -463,15 +455,11 @@ variables <- c("budget","genres","homePage","productionCompany","productionCompa
 ```
 
 ```{r convirtendo categoricas en factor y discretizando las numericas}
-pelis<- datos %>% 
-  mutate(across(all_of(variables), as.factor)) %>%
-  mutate(across(!all_of(variables), discretize))
-#convirtiendo en transacciones
-transa<- as(pelis, "transactions")
-#crear variables dummy de las categoricas
-summary(transa)
-itemLabels(transa)
-as(transa[1:2, 1:10], "matrix")
+pelis <- datos %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(across(where(is.numeric), discretize))
+transa <- as(datos,"transactions")
+
 
                                         
 ```
@@ -479,7 +467,7 @@ as(transa[1:2, 1:10], "matrix")
 ```{r}
 reglas<-apriori(transa, parameter = list(support= 0.20, target="frequent", minlen=2, maxlen=4))
 
-inspect(sort(reglas))          
+#inspect(sort(reglas))          
 
 
 ```
@@ -491,7 +479,7 @@ inspect(sort(reglas))
 ```{r prueba 1, soporte alto confianza alta  }
 reglas<-apriori(transa, parameter = list(support= 0.30, confidence=0.7, target="frequent", minlen=2, maxlen=4))
 
-inspect(sort(reglas))          
+inspect(head(sort(reglas), 5))      
 
 
 ```
@@ -504,7 +492,7 @@ Con un soporte alto, de mayor o igual a 0.30, por lo que se tomaron en cuenta so
 ```{r prueba 2, soporte medio confianza media  }
 reglas<-apriori(transa, parameter = list(support= 0.20, confidence=0.6, target="frequent", minlen=2, maxlen=4))
 
-inspect(sort(reglas))          
+inspect(head(sort(reglas), 5))     
 
 
 ```
@@ -514,8 +502,8 @@ inspect(sort(reglas))
 ```{r prueba 3, soporte bajo, confianza baja  }
 reglas<-apriori(transa, parameter = list(support= 0.10, confidence=0.5, target="frequent", minlen=2, maxlen=4))
 
-inspect(sort(reglas))          
-
+    
+inspect(head(sort(reglas), 5))
 
 ```
 1. Las reglas: video=FALSE, originalLanguage=en, sigue dominando en los items
@@ -539,6 +527,18 @@ plot(head(sort(reglas, by="lift"), n=50), method = "graph", control=list(cex=.8)
 
 • Hace un resumen de los hallazgos que arrojó el agrupamiento.
 
+
+ El análisis de agrupamiento reveló tres grupos principales en el conjunto de datos de películas:
+
+   - Grupo 1: Películas con recaudación y presupuesto moderado, y una popularidad más bien baja.
+   - Grupo 2: Películas de alto presupuesto, alta recaudación y alta popularidad. 
+              Este grupo probablemente incluye grandes producciones o éxitos de taquilla.
+   - Grupo 3: Películas de bajo presupuesto con popularidades relativamente bajas 
+              y recaudaciones muy dispersas. Este grupo parece representar películas independientes o de nicho.
+
+ El método de silueta mostró que el clustering jerárquico obtuvo mejores resultados que k-medias, 
+ con una silueta promedio de 0.35 frente a 0.15, lo que indica que las agrupaciones realizadas 
+ por el clustering jerárquico son más compactas y mejor definidas.
 
 • Llega a conclusiones sobre el análisis de componentes principales
 
@@ -582,11 +582,7 @@ Al tener varios datos de forma budget=0 y revenue=0 podria indicar problemas de 
 
 Desarollar mejores estrategias de marketing mas efectivas para aprovechar maxima difucion. 
 
-
-
-
   
     
-
 
 

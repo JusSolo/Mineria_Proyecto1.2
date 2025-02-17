@@ -4,11 +4,7 @@ author:
 - 'Juan Luis Solórzano (carnet: 201598)'
 - 'Micaela Yataz (carnet: 18960)'
 date: "2025-01-20"
-output:
-  word_document: default
-  html_document:
-    df_print: paged
-  pdf_document: default
+output: pdf_document
 ---
 
 
@@ -30,7 +26,7 @@ library(paran)
 
 
 ```{r cargando archivo, echo=FALSE}
-datos<-read.csv("C:/Users/junKa/Desktop/datos/movies.csv", stringsAsFactors = F)
+datos<-read.csv("movies.csv", stringsAsFactors = F)
 
 ```
 
